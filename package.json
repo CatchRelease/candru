@@ -30,12 +30,12 @@
   },
   "bugs": {
     "email": "mikecx@gmail.com",
-    "url": "https://github.com/catchandrelease/candru/issues"
+    "url": "https://github.com/catchrelease/candru/issues"
   },
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/catchandrelease/candru.git"
+    "url": "https://github.com/catchrelease/candru.git"
   },
   "dependencies": {},
   "devDependencies": {
