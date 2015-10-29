@@ -1,7 +1,77 @@
-var bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
+var Emitter, noop,
+  slice = [].slice,
+  bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
+  extend1 = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
+  hasProp = {}.hasOwnProperty;
 
-window.Candru = (function() {
+noop = function() {};
+
+Emitter = (function() {
+  function Emitter() {}
+
+  Emitter.prototype.addEventListener = Emitter.prototype.on;
+
+  Emitter.prototype.on = function(event, fn) {
+    this._callbacks = this._callbacks || {};
+    if (!this._callbacks[event]) {
+      this._callbacks[event] = [];
+    }
+    this._callbacks[event].push(fn);
+    return this;
+  };
+
+  Emitter.prototype.emit = function() {
+    var args, callback, callbacks, event, j, len;
+    event = arguments[0], args = 2 <= arguments.length ? slice.call(arguments, 1) : [];
+    this._callbacks = this._callbacks || {};
+    callbacks = this._callbacks[event];
+    if (callbacks) {
+      for (j = 0, len = callbacks.length; j < len; j++) {
+        callback = callbacks[j];
+        callback.apply(this, args);
+      }
+    }
+    return this;
+  };
+
+  Emitter.prototype.removeListener = Emitter.prototype.off;
+
+  Emitter.prototype.removeAllListeners = Emitter.prototype.off;
+
+  Emitter.prototype.removeEventListener = Emitter.prototype.off;
+
+  Emitter.prototype.off = function(event, fn) {
+    var callback, callbacks, i, j, len;
+    if (!this._callbacks || arguments.length === 0) {
+      this._callbacks = {};
+      return this;
+    }
+    callbacks = this._callbacks[event];
+    if (!callbacks) {
+      return this;
+    }
+    if (arguments.length === 1) {
+      delete this._callbacks[event];
+      return this;
+    }
+    for (i = j = 0, len = callbacks.length; j < len; i = ++j) {
+      callback = callbacks[i];
+      if (callback === fn) {
+        callbacks.splice(i, 1);
+        break;
+      }
+    }
+    return this;
+  };
+
+  return Emitter;
+
+})();
+
+window.Candru = (function(superClass) {
   var addClass, extend, hasClass, readableFileSize, removeClass;
+
+  extend1(Candru, superClass);
 
   extend = function(object, properties) {
     var key, val;
@@ -75,6 +145,7 @@ window.Candru = (function() {
       maxFileSize: 4294967296,
       evaporate: null,
       sanitizeFilename: this.sanitizeFilename,
+      renameFile: this.renameFile,
       overHandler: this.overHandler,
       leaveHandler: this.leaveHandler,
       dropHandler: this.dropHandler,
@@ -82,6 +153,8 @@ window.Candru = (function() {
       getCancelEl: this.getCancelEl,
       uploadHandler: this.uploadHandler,
       uploadComplete: this.uploadComplete,
+      uploadStartCallback: noop,
+      uploadCompleteCallback: noop,
       uploadProgress: this.uploadProgress,
       uploadCancel: this.uploadCancel,
       uploadInfo: this.uploadInfo,
@@ -111,6 +184,7 @@ window.Candru = (function() {
   Candru.prototype.overHandler = function(e) {
     e.preventDefault();
     e.stopPropagation();
+    this.emit('candru-dragover', e);
     addClass(this.el, this.defaults.overClass);
     return false;
   };
@@ -118,16 +192,17 @@ window.Candru = (function() {
   Candru.prototype.leaveHandler = function(e) {
     e.preventDefault();
     e.stopPropagation();
+    this.emit('candru-dragleave', e);
     removeClass(this.el, this.defaults.overClass);
     return false;
   };
 
   Candru.prototype.fileTypeCheck = function(file) {
-    var acceptedType, i, len, ref, type;
+    var acceptedType, j, len, ref, type;
     acceptedType = false;
     ref = this.defaults.allowedTypes;
-    for (i = 0, len = ref.length; i < len; i++) {
-      type = ref[i];
+    for (j = 0, len = ref.length; j < len; j++) {
+      type = ref[j];
       if (type.test(file.type)) {
         acceptedType = true;
         break;
@@ -152,7 +227,11 @@ window.Candru = (function() {
     reservedRe = /^\.+$/;
     windowsReservedRe = /^(con|prn|aux|nul|com[0-9]|lpt[0-9])(\..*)?$/i;
     replacement = '';
-    return file.name.replace(spacesRe, '_').replace(illegalRe, replacement).replace(controlRe, replacement).replace(reservedRe, replacement).replace(windowsReservedRe, replacement);
+    return file.name.toLowerCase().replace(spacesRe, '_').replace(illegalRe, replacement).replace(controlRe, replacement).replace(reservedRe, replacement).replace(windowsReservedRe, replacement);
+  };
+
+  Candru.prototype.renameFile = function(file) {
+    return file.name;
   };
 
   Candru.prototype.getMeterEl = function(index) {
@@ -172,7 +251,7 @@ window.Candru = (function() {
     uploadItem = document.createElement('div');
     uploadItem.className = 'candru-upload clearfix';
     uploadItem.dataset.uploadId = index;
-    uploadItem.innerHTML = "<span class='cancel left'><a href='#'>&cross;</a></span><span class='filename left'><label>File:</label>" + file.name + "</span><span class='filesize left'><label>Size:</label>" + (readableFileSize(file.size)) + "</span><div class='candru-progress right'><span class='meter'></span></div>";
+    uploadItem.innerHTML = "<button class='cancel left tiny'>Cancel</button>\n<span class='filename left'>\n  <label>\n      File:\n  </label>\n  " + file.name + "\n</span>\n<span class='filesize left'>\n  <label>\n      Size:\n  </label>\n  " + (readableFileSize(file.size)) + "\n</span>\n<div class='candru-progress right'>\n  <span class='meter'></span>\n</div>";
     uploadItem.querySelector(this.defaults.cancelSelector).addEventListener('click', (function(_this) {
       return function(e) {
         return (function(index) {
@@ -184,13 +263,14 @@ window.Candru = (function() {
   };
 
   Candru.prototype.dropHandler = function(e) {
-    var file, files, i, len, uploadItem;
+    var file, files, j, len, uploadItem;
     e.preventDefault();
     e.stopPropagation();
+    this.emit('candru-drop', e);
     removeClass(this.el, this.defaults.overClass);
     files = e.dataTransfer.files;
-    for (i = 0, len = files.length; i < len; i++) {
-      file = files[i];
+    for (j = 0, len = files.length; j < len; j++) {
+      file = files[j];
       if (!this.fileTypeCheck(file)) {
         console.log('Skipping file of type: ', file.type);
         continue;
@@ -201,13 +281,18 @@ window.Candru = (function() {
       }
       uploadItem = this.defaults.createUploadItem(file, this._index);
       this.el.appendChild(uploadItem);
+      file.uniqueId = Math.random().toString(36).substr(2, 16);
+      file.sanitizedFileName = this.defaults.sanitizeFilename(file);
+      file.uploadName = this.defaults.renameFile(file);
       if (this.defaults.queue) {
+        this.emit('candru-queue-add', file, this._index, 'unprocessed');
         this._fileQueue.push({
           file: file,
           index: this._index,
           state: 'unprocessed'
         });
       } else {
+        this.emit('candru-process', file, this._index);
         this.defaults.uploadHandler(file, this._index);
       }
       this._index++;
@@ -221,31 +306,37 @@ window.Candru = (function() {
       throw new Error('Evaporate instance is null.');
     }
     evap = this.defaults.evaporate;
+    this.defaults.uploadStartCallback(file, index, this.allFilesFinished());
     return evap.add({
-      name: this.defaults.sanitizeFilename(file),
+      name: file.uploadName,
       file: file,
       complete: (function(_this) {
         return function() {
+          _this.emit('candru-evaporate-complete', file, index);
           return _this.defaults.uploadComplete(file, index);
         };
       })(this),
       progress: (function(_this) {
         return function(progress) {
+          _this.emit('candru-evaporate-complete', progress, file, index);
           return _this.defaults.uploadProgress(progress, file, index);
         };
       })(this),
       info: (function(_this) {
         return function(message) {
+          _this.emit('candru-evaporate-info', message, file, index);
           return _this.defaults.uploadInfo(message, file, index);
         };
       })(this),
       warn: (function(_this) {
         return function(message) {
+          _this.emit('candru-evaporate-warn', message, file, index);
           return _this.defaults.uploadWarn(message, file, index);
         };
       })(this),
       error: (function(_this) {
         return function(message) {
+          _this.emit('candru-evaporate-error', message, file, index);
           return _this.defaults.uploadError(message, file, index);
         };
       })(this)
@@ -259,7 +350,8 @@ window.Candru = (function() {
     uploadMeter.style.width = '100%';
     addClass(uploadMeter, this.defaults.uploadSuccessClass);
     cancelEl = this.defaults.getCancelEl(index);
-    return addClass(cancelEl.querySelector('a'), 'hidden');
+    addClass(cancelEl, 'disabled');
+    return this.defaults.uploadCompleteCallback(file, index, this.allFilesFinished());
   };
 
   Candru.prototype.uploadProgress = function(progress, file, index) {
@@ -269,27 +361,30 @@ window.Candru = (function() {
   };
 
   Candru.prototype.uploadCancel = function(file, index) {
-    var cancelEl, evap, i, len, queuedFile, ref, uploadMeter;
-    this._cancelled++;
-    if (!this.defaults.evaporate) {
-      throw new Error('Evaporate instance is null.');
-    }
-    evap = this.defaults.evaporate;
-    uploadMeter = this.defaults.getMeterEl(index);
-    addClass(uploadMeter, this.defaults.uploadCancelledClass);
-    uploadMeter.style.width = '100%';
+    var cancelEl, evap, j, len, queuedFile, ref, uploadMeter;
     cancelEl = this.defaults.getCancelEl(index);
-    addClass(cancelEl.querySelector('a'), 'hidden');
-    if (this.defaults.queue) {
-      ref = this._fileQueue;
-      for (i = 0, len = ref.length; i < len; i++) {
-        queuedFile = ref[i];
-        if (queuedFile.index === index) {
-          queuedFile.state = 'cancelled';
+    if (!hasClass(cancelEl, 'disabled')) {
+      this._cancelled++;
+      if (!this.defaults.evaporate) {
+        throw new Error('Evaporate instance is null.');
+      }
+      evap = this.defaults.evaporate;
+      uploadMeter = this.defaults.getMeterEl(index);
+      addClass(uploadMeter, this.defaults.uploadCancelledClass);
+      uploadMeter.style.width = '100%';
+      cancelEl = this.defaults.getCancelEl(index);
+      addClass(cancelEl, 'disabled');
+      if (this.defaults.queue) {
+        ref = this._fileQueue;
+        for (j = 0, len = ref.length; j < len; j++) {
+          queuedFile = ref[j];
+          if (queuedFile.index === index) {
+            queuedFile.state = 'cancelled';
+          }
         }
       }
+      return evap.cancel(index);
     }
-    return evap.cancel(index);
   };
 
   Candru.prototype.uploadInfo = function(message, file, index) {
@@ -315,14 +410,14 @@ window.Candru = (function() {
   };
 
   Candru.prototype.processQueue = function() {
-    var i, len, queuedFile, ref, results;
+    var j, len, queuedFile, ref, results;
     if (!this.defaults.queue) {
       return false;
     }
     ref = this._fileQueue;
     results = [];
-    for (i = 0, len = ref.length; i < len; i++) {
-      queuedFile = ref[i];
+    for (j = 0, len = ref.length; j < len; j++) {
+      queuedFile = ref[j];
       if (queuedFile.state === 'unprocessed') {
         this.defaults.uploadHandler(queuedFile.file, queuedFile.index);
         results.push(queuedFile.state = 'processed');
@@ -334,21 +429,21 @@ window.Candru = (function() {
   };
 
   Candru.prototype.cancelAll = function() {
-    var cancelTriggers, i, j, len, len1, queuedFile, ref, results, trigger;
-    cancelTriggers = this.el.querySelectorAll(this.defaults.cancelSelector + ' a');
-    for (i = 0, len = cancelTriggers.length; i < len; i++) {
-      trigger = cancelTriggers[i];
-      console.log(trigger, hasClass(trigger, 'hidden'));
-      if (!hasClass(trigger, 'hidden')) {
+    var cancelTriggers, j, k, len, len1, queuedFile, ref, results, trigger;
+    cancelTriggers = this.el.querySelectorAll(this.defaults.cancelSelector);
+    for (j = 0, len = cancelTriggers.length; j < len; j++) {
+      trigger = cancelTriggers[j];
+      if (!hasClass(trigger, 'disabled')) {
         trigger.click();
       }
     }
     if (this.defaults.queue) {
       ref = this._fileQueue;
       results = [];
-      for (j = 0, len1 = ref.length; j < len1; j++) {
-        queuedFile = ref[j];
+      for (k = 0, len1 = ref.length; k < len1; k++) {
+        queuedFile = ref[k];
         if (queuedFile.state === 'unprocessed') {
+          this.emit('candru-queue-cancelled', queuedFile.file, queuedFile.index, 'cancelled');
           results.push(queuedFile.state = 'cancelled');
         } else {
           results.push(void 0);
@@ -368,4 +463,4 @@ window.Candru = (function() {
 
   return Candru;
 
-})();
+})(Emitter);

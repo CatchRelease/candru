@@ -92,6 +92,7 @@ class window.Candru extends Emitter
       maxFileSize           : 4294967296, # in bytes
       evaporate             : null,
       sanitizeFilename      : @sanitizeFilename,
+      renameFile            : @renameFile,
       overHandler           : @overHandler,
       leaveHandler          : @leaveHandler,
       dropHandler           : @dropHandler,
@@ -99,6 +100,8 @@ class window.Candru extends Emitter
       getCancelEl           : @getCancelEl,
       uploadHandler         : @uploadHandler,
       uploadComplete        : @uploadComplete,
+      uploadStartCallback   : noop,
+      uploadCompleteCallback: noop,
       uploadProgress        : @uploadProgress,
       uploadCancel          : @uploadCancel,
       uploadInfo            : @uploadInfo,
@@ -169,11 +172,15 @@ class window.Candru extends Emitter
     replacement = ''
 
     return file.name
+    .toLowerCase()
     .replace(spacesRe, '_')
     .replace(illegalRe, replacement)
     .replace(controlRe, replacement)
     .replace(reservedRe, replacement)
     .replace(windowsReservedRe, replacement)
+
+  renameFile: (file) ->
+    file.name
 
   getMeterEl: (index) =>
     uploadMeterSelector = ".candru [data-upload-id=\"#{index}\"] .meter"
@@ -187,25 +194,24 @@ class window.Candru extends Emitter
     uploadItem = document.createElement('div')
     uploadItem.className = 'candru-upload clearfix'
     uploadItem.dataset.uploadId = index
-    uploadItem.innerHTML = "\
-      <span class='cancel left'>\
-        <a href='#'>&cross;</a>\
-      </span>\
-      <span class='filename left'>\
-        <label>\
-            File:\
-        </label>\
-        #{file.name}\
-      </span>\
-      <span class='filesize left'>\
-        <label>\
-            Size:\
-        </label>\
-        #{readableFileSize(file.size)}\
-      </span>\
-      <div class='candru-progress right'>\
-        <span class='meter'></span>\
-      </div>"
+    uploadItem.innerHTML = """
+      <button class='cancel left tiny'>Cancel</button>
+      <span class='filename left'>
+        <label>
+            File:
+        </label>
+        #{file.name}
+      </span>
+      <span class='filesize left'>
+        <label>
+            Size:
+        </label>
+        #{readableFileSize(file.size)}
+      </span>
+      <div class='candru-progress right'>
+        <span class='meter'></span>
+      </div>
+      """
 
     uploadItem.querySelector(@defaults.cancelSelector).addEventListener('click', (e) =>
       ((index) =>
@@ -234,6 +240,10 @@ class window.Candru extends Emitter
       uploadItem = @defaults.createUploadItem(file, @_index)
       @el.appendChild(uploadItem)
 
+      file.uniqueId = Math.random().toString(36).substr(2,16)
+      file.sanitizedFileName = @defaults.sanitizeFilename(file)
+      file.uploadName = @defaults.renameFile(file)
+
       if @defaults.queue
         @emit('candru-queue-add', file, @_index, 'unprocessed')
         @_fileQueue.push({
@@ -253,8 +263,10 @@ class window.Candru extends Emitter
     throw new Error('Evaporate instance is null.') unless @defaults.evaporate
     evap = @defaults.evaporate
 
+    @defaults.uploadStartCallback(file, index, @allFilesFinished())
+
     evap.add({
-      name: @defaults.sanitizeFilename(file),
+      name: file.uploadName,
       file: file,
       complete: =>
         @emit('candru-evaporate-complete', file, index)
@@ -281,31 +293,36 @@ class window.Candru extends Emitter
     addClass(uploadMeter, @defaults.uploadSuccessClass)
 
     cancelEl = @defaults.getCancelEl(index)
-    addClass(cancelEl.querySelector('a'), 'hidden')
+    addClass(cancelEl, 'disabled')
+
+    @defaults.uploadCompleteCallback(file, index, @allFilesFinished())
 
   uploadProgress: (progress, file, index) =>
     uploadMeter = @defaults.getMeterEl(index)
     uploadMeter.style.width = "#{progress * 100.0}%"
 
   uploadCancel: (file, index) =>
-    @_cancelled++
-
-    throw new Error('Evaporate instance is null.') unless @defaults.evaporate
-    evap = @defaults.evaporate
-
-    uploadMeter = @defaults.getMeterEl(index)
-    addClass(uploadMeter, @defaults.uploadCancelledClass)
-    uploadMeter.style.width = '100%'
-
     cancelEl = @defaults.getCancelEl(index)
-    addClass(cancelEl.querySelector('a'), 'hidden')
 
-    if @defaults.queue
-      for queuedFile in @_fileQueue
-        if queuedFile.index is index
-          queuedFile.state = 'cancelled'
+    if not hasClass(cancelEl, 'disabled')
+      @_cancelled++
 
-    evap.cancel(index)
+      throw new Error('Evaporate instance is null.') unless @defaults.evaporate
+      evap = @defaults.evaporate
+
+      uploadMeter = @defaults.getMeterEl(index)
+      addClass(uploadMeter, @defaults.uploadCancelledClass)
+      uploadMeter.style.width = '100%'
+
+      cancelEl = @defaults.getCancelEl(index)
+      addClass(cancelEl, 'disabled')
+
+      if @defaults.queue
+        for queuedFile in @_fileQueue
+          if queuedFile.index is index
+            queuedFile.state = 'cancelled'
+
+      evap.cancel(index)
 
   uploadInfo: (message, file, index) =>
     if @defaults.debug
@@ -334,11 +351,11 @@ class window.Candru extends Emitter
       else
 
   cancelAll: ->
-    cancelTriggers = @el.querySelectorAll(@defaults.cancelSelector + ' a')
+    cancelTriggers = @el.querySelectorAll(@defaults.cancelSelector)
 
     # Fake the cancel click
     for trigger in cancelTriggers
-      trigger.click() unless hasClass(trigger, 'hidden')
+      trigger.click() unless hasClass(trigger, 'disabled')
 
     # Clear up the queue
     if @defaults.queue

@@ -7,17 +7,17 @@ var coffeelint = require('gulp-coffeelint');
 var coffee = require('gulp-coffee');
 var minify = require('gulp-minify');
 
-var sass = require('gulp-sass')
+var sass = require('gulp-sass');
 var cssmin = require('gulp-cssmin');
 var rename = require('gulp-rename');
 
 gulp.task('default', function(taskDone) {
-  runSequence('clean-dist', 'coffeelint', 'coffee', 'minify-js', 'sass', 'minify-css', taskDone);	
+  runSequence('clean-dist', 'coffeelint', 'coffee', 'minify-js', 'sass', 'minify-css', taskDone);
 });
 
 gulp.task('clean-dist', function () {
   return del([
-    './dist/*.min.*'
+    './dist/*'
   ]);
 });
 

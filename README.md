@@ -35,6 +35,7 @@ make sure it's included.
 * **maxFileSize**: default = 4294967296, Maximum file size in bytes
 * **evaporate**: default = null, An EvaporateJS instance to use for file uploads. You will need to provide a different upload handler if this doesn't exist.
 * **sanitizeFilename**: default = this.sanitizeFilename, A function passed in the file used to clean up the file name, needs to return a string
+* **renameFile**: default = this.renameFile, A function passed in the file, by default just returns the file name
 * **overHandler**: default = this.overHandler, A function passed in the event, should preventDefault/stopPropagation
 * **leaveHandler**: default = this.leaveHandler, A function passed in the event, should preventDefault/stopPropagation
 * **dropHandler**: default = this.dropHandler, A function passed in the event, should preventDefault/stopPropagation, handles calling everything
@@ -42,6 +43,8 @@ make sure it's included.
 * **getCancelEl**: default = this.getCancelEl, A function passed in index, returns element for cancel button
 * **uploadHandler**: default = this.uploadHandler, A function passed in the file and index, handles putting the file on the remote
 * **uploadComplete**: default = this.uploadComplete, A function passed in the file and index, handles setting a file as complete
+* **uploadStartCallback**: default = noop, A callback function passed in the file, index, and true/false if all files have finished.
+* **uploadCompleteCallback**: default = noop, A callback function passed in the file, index, and true/false if all files have finished.
 * **uploadProgress**: default = this.uploadProgress, A function passed in the progress (0.0 - 1.0), the file, and the index, handles updating the progress.
 * **uploadCancel**: default = this.uploadCancel, A function passed in the the file, and the index, handles updating the progress.
 * **uploadInfo**: default = this.uploadInfo, A function passed in the message, the file, and the index, handles updating the progress.
@@ -77,9 +80,7 @@ make sure it's included.
 Simply supply a different "createUploadItem" function in the options that returns an HTMLElement. The default structure looks like:
 
         <div class="candru-upload clearfix' data-upload-id=0>
-          <span class='cancel left'>
-            <a href='#'>&cross;</a>
-          </span>
+          <button class='cancel left tiny'></button>
           <span class='filename left'>
             <label>
                 File:
@@ -100,6 +101,24 @@ Simply supply a different "createUploadItem" function in the options that return
 Your outermost item should have data-upload-id set to the index that is passed in as the second parameter to the function.
 If you chose to rename cancel, simply update the "cancelSelector" in the options hash. File name, size, and even a thumbnail
 can be pulled from the first function parameter.
+
+## Renaming the File
+
+      // Make all filenames lowercase
+      var candru = new Candru(element, {
+        renameFile: function (file) {
+          return file.sanitizedFileName.toLowerCase()
+        }
+      })
+
+## Changes to the file object
+A few additional fields are made available on each file object for convenience.
+
+`file.sanitizedFileName` - The name of the file after it's been run through the sanitization function
+
+`file.uniqueId` - A unique random string generated for each file
+
+`file.uploadName` - The name of the file after both sanitization and renaming.
 
 ## TODO
 
