@@ -51,11 +51,13 @@ make sure it's included.
 ### getFileCount - Return the number of total files
 
 `var candru = new Candru(element, options)`
+
 `candru.getFileCount()`
 
 ### allFilesFinished - Return true if all files have finished uploading, false otherwise
 
 `var candru = new Candru(element, options)`
+
 `candru.allFilesFinished()`
 
 ## Overriding the template
