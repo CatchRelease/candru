@@ -1,4 +1,52 @@
-class window.Candru
+noop = ->
+
+# Borrowing the Emitter from dropzone
+# https://raw.githubusercontent.com/enyo/dropzone/master/src/dropzone.coffee
+class Emitter
+  addEventListener: @::on
+  on: (event, fn) ->
+    @_callbacks = @_callbacks || {}
+    # Create namespace for this event
+    @_callbacks[event] = [] unless @_callbacks[event]
+    @_callbacks[event].push fn
+    return @
+
+
+  emit: (event, args...) ->
+    @_callbacks = @_callbacks || {}
+    callbacks = @_callbacks[event]
+
+    if callbacks
+      callback.apply @, args for callback in callbacks
+
+    return @
+
+  removeListener: @::off
+  removeAllListeners: @::off
+  removeEventListener: @::off
+  off: (event, fn) ->
+    if !@_callbacks || arguments.length == 0
+      @_callbacks = {}
+      return @
+
+    # specific event
+    callbacks = @_callbacks[event]
+    return @ unless callbacks
+
+    # remove all handlers
+    if arguments.length == 1
+      delete @_callbacks[event]
+      return @
+
+    # remove specific handler
+    for callback, i in callbacks
+      if callback == fn
+        callbacks.splice i, 1
+        break
+
+    return @
+
+class window.Candru extends Emitter
   # Define a couple of useful helpers
   extend = (object, properties) ->
     for key, val of properties
@@ -43,45 +91,46 @@ class window.Candru
       allowedTypes          : [/^image\//, /^video\//], # array of regex
       maxFileSize           : 4294967296, # in bytes
       evaporate             : null,
-      sanitizeFilename      : this.sanitizeFilename,
-      overHandler           : this.overHandler,
-      leaveHandler          : this.leaveHandler,
-      dropHandler           : this.dropHandler,
-      getMeterEl            : this.getMeterEl,
-      getCancelEl           : this.getCancelEl,
-      uploadHandler         : this.uploadHandler,
-      uploadComplete        : this.uploadComplete,
-      uploadProgress        : this.uploadProgress,
-      uploadCancel          : this.uploadCancel,
-      uploadInfo            : this.uploadInfo,
-      uploadWarn            : this.uploadWarn,
-      uploadError           : this.uploadError,
-      createUploadItem      : this.createUploadItem
+      sanitizeFilename      : @sanitizeFilename,
+      overHandler           : @overHandler,
+      leaveHandler          : @leaveHandler,
+      dropHandler           : @dropHandler,
+      getMeterEl            : @getMeterEl,
+      getCancelEl           : @getCancelEl,
+      uploadHandler         : @uploadHandler,
+      uploadComplete        : @uploadComplete,
+      uploadProgress        : @uploadProgress,
+      uploadCancel          : @uploadCancel,
+      uploadInfo            : @uploadInfo,
+      uploadWarn            : @uploadWarn,
+      uploadError           : @uploadError,
+      createUploadItem      : @createUploadItem
     }
 
-    this._index = 0 # Keeps track of how many files we've uploaded
-    this._complete = 0
-    this._cancelled = 0
-    this._failed = 0
+    @_index = 0 # Keeps track of how many files we've uploaded
+    @_complete = 0
+    @_cancelled = 0
+    @_failed = 0
 
-    this._fileQueue = []
+    @_fileQueue = []
 
-    this.defaults = extend(defaults, options)
-    this.el = window.document.querySelector(el)
-    throw new Error('Could not find element for uploader.') unless this.el
+    @defaults = extend(defaults, options)
+    @el = window.document.querySelector(el)
+    throw new Error('Could not find element for uploader.') unless @el
 
-    this.init()
+    @init()
 
   init: ->
-    this.el.addEventListener('dragover', this.defaults.overHandler)
-    this.el.addEventListener('dragleave', this.defaults.leaveHandler)
-    this.el.addEventListener('drop', this.defaults.dropHandler)
+    @el.addEventListener('dragover', @defaults.overHandler)
+    @el.addEventListener('dragleave', @defaults.leaveHandler)
+    @el.addEventListener('drop', @defaults.dropHandler)
 
   overHandler: (e) =>
     e.preventDefault()
     e.stopPropagation()
 
-    addClass(this.el, this.defaults.overClass)
+    @emit('candru-dragover', e)
+    addClass(@el, @defaults.overClass)
 
     false
 
@@ -89,14 +138,15 @@ class window.Candru
     e.preventDefault()
     e.stopPropagation()
 
-    removeClass(this.el, this.defaults.overClass)
+    @emit('candru-dragleave', e)
+    removeClass(@el, @defaults.overClass)
 
     false
 
   fileTypeCheck: (file) ->
     acceptedType = false
 
-    for type in this.defaults.allowedTypes
+    for type in @defaults.allowedTypes
       if type.test(file.type)
         acceptedType = true
         break
@@ -104,7 +154,7 @@ class window.Candru
     return acceptedType
 
   fileSizeCheck: (file) ->
-    if file.size > this.defaults.maxFileSize
+    if file.size > @defaults.maxFileSize
       false
     else
       true
@@ -127,11 +177,11 @@ class window.Candru
 
   getMeterEl: (index) =>
     uploadMeterSelector = ".candru [data-upload-id=\"#{index}\"] .meter"
-    return this.el.querySelector(uploadMeterSelector)
+    return @el.querySelector(uploadMeterSelector)
 
   getCancelEl: (index) =>
     uploadMeterSelector = ".candru [data-upload-id=\"#{index}\"] .cancel"
-    return this.el.querySelector(uploadMeterSelector)
+    return @el.querySelector(uploadMeterSelector)
 
   createUploadItem: (file, index) =>
     uploadItem = document.createElement('div')
@@ -157,9 +207,9 @@ class window.Candru
         <span class='meter'></span>\
       </div>"
 
-    uploadItem.querySelector(this.defaults.cancelSelector).addEventListener('click', (e) =>
+    uploadItem.querySelector(@defaults.cancelSelector).addEventListener('click', (e) =>
       ((index) =>
-        this.defaults.uploadCancel(file, index)
+        @defaults.uploadCancel(file, index)
       )(index))
 
     return uploadItem
@@ -168,129 +218,137 @@ class window.Candru
     e.preventDefault()
     e.stopPropagation()
 
-    removeClass(this.el, this.defaults.overClass)
+    @emit('candru-drop', e)
+    removeClass(@el, @defaults.overClass)
 
     files = e.dataTransfer.files
     for file in files
-      if not this.fileTypeCheck(file)
+      if not @fileTypeCheck(file)
         console.log('Skipping file of type: ', file.type)
         continue
 
-      if not this.fileSizeCheck(file)
+      if not @fileSizeCheck(file)
         console.log('Skipping file of size: ', file.size)
         continue
 
-      uploadItem = this.defaults.createUploadItem(file, this._index)
-      this.el.appendChild(uploadItem)
+      uploadItem = @defaults.createUploadItem(file, @_index)
+      @el.appendChild(uploadItem)
 
-      if this.defaults.queue
-        this._fileQueue.push({
+      if @defaults.queue
+        @emit('candru-queue-add', file, @_index, 'unprocessed')
+        @_fileQueue.push({
           file: file,
-          index: this._index,
+          index: @_index,
           state: 'unprocessed'
         })
       else
-        this.defaults.uploadHandler(file, this._index)
+        @emit('candru-process', file, @_index)
+        @defaults.uploadHandler(file, @_index)
 
-      this._index++
+      @_index++
 
     false
 
   uploadHandler: (file, index) =>
-    throw new Error('Evaporate instance is null.') unless this.defaults.evaporate
-    evap = this.defaults.evaporate
+    throw new Error('Evaporate instance is null.') unless @defaults.evaporate
+    evap = @defaults.evaporate
 
     evap.add({
-      name: this.defaults.sanitizeFilename(file),
+      name: @defaults.sanitizeFilename(file),
       file: file,
       complete: =>
-        this.defaults.uploadComplete(file, index)
+        @emit('candru-evaporate-complete', file, index)
+        @defaults.uploadComplete(file, index)
       progress: (progress) =>
-        this.defaults.uploadProgress(progress, file, index)
+        @emit('candru-evaporate-complete', progress, file, index)
+        @defaults.uploadProgress(progress, file, index)
       info: (message) =>
-        this.defaults.uploadInfo(message, file, index)
+        @emit('candru-evaporate-info', message, file, index)
+        @defaults.uploadInfo(message, file, index)
       warn: (message) =>
-        this.defaults.uploadWarn(message, file, index)
+        @emit('candru-evaporate-warn', message, file, index)
+        @defaults.uploadWarn(message, file, index)
       error: (message) =>
-        this.defaults.uploadError(message, file, index)
+        @emit('candru-evaporate-error', message, file, index)
+        @defaults.uploadError(message, file, index)
     })
 
   uploadComplete: (file, index) =>
-    this._complete++
+    @_complete++
 
-    uploadMeter = this.defaults.getMeterEl(index)
+    uploadMeter = @defaults.getMeterEl(index)
     uploadMeter.style.width = '100%' # Sometimes it goes so fast it doesn't get progress before it finishes
-    addClass(uploadMeter, this.defaults.uploadSuccessClass)
+    addClass(uploadMeter, @defaults.uploadSuccessClass)
 
-    cancelEl = this.defaults.getCancelEl(index)
+    cancelEl = @defaults.getCancelEl(index)
     addClass(cancelEl.querySelector('a'), 'hidden')
 
   uploadProgress: (progress, file, index) =>
-    uploadMeter = this.defaults.getMeterEl(index)
+    uploadMeter = @defaults.getMeterEl(index)
     uploadMeter.style.width = "#{progress * 100.0}%"
 
   uploadCancel: (file, index) =>
-    this._cancelled++
+    @_cancelled++
 
-    throw new Error('Evaporate instance is null.') unless this.defaults.evaporate
-    evap = this.defaults.evaporate
+    throw new Error('Evaporate instance is null.') unless @defaults.evaporate
+    evap = @defaults.evaporate
 
-    uploadMeter = this.defaults.getMeterEl(index)
-    addClass(uploadMeter, this.defaults.uploadCancelledClass)
+    uploadMeter = @defaults.getMeterEl(index)
+    addClass(uploadMeter, @defaults.uploadCancelledClass)
     uploadMeter.style.width = '100%'
 
-    cancelEl = this.defaults.getCancelEl(index)
+    cancelEl = @defaults.getCancelEl(index)
     addClass(cancelEl.querySelector('a'), 'hidden')
 
-    if this.defaults.queue
-      for queuedFile in this._fileQueue
+    if @defaults.queue
+      for queuedFile in @_fileQueue
         if queuedFile.index is index
           queuedFile.state = 'cancelled'
 
     evap.cancel(index)
 
   uploadInfo: (message, file, index) =>
-    if this.defaults.debug
+    if @defaults.debug
       console.log('INFO: File:', file, 'Index:', index, 'Message:', message)
 
   uploadWarn: (message, file, index) =>
-    if this.defaults.debug
+    if @defaults.debug
       console.log('WARN: File:', file, 'Index:', index, 'Message:', message)
 
   uploadError: (message, file, index) =>
-    if this.defaults.debug
+    if @defaults.debug
       console.log('ERROR: File:', file, 'Index:', index, 'Message:', message)
 
-    this._failed++
+    @_failed++
 
-    uploadMeter = this.getMeterEl(index)
-    addClass(uploadMeter, this.defaults.uploadFailedClass)
+    uploadMeter = @getMeterEl(index)
+    addClass(uploadMeter, @defaults.uploadFailedClass)
 
   processQueue: ->
-    return false unless this.defaults.queue
+    return false unless @defaults.queue
 
-    for queuedFile in this._fileQueue
+    for queuedFile in @_fileQueue
       if queuedFile.state is 'unprocessed'
-        this.defaults.uploadHandler(queuedFile.file, queuedFile.index)
+        @defaults.uploadHandler(queuedFile.file, queuedFile.index)
         queuedFile.state = 'processed'
       else
 
   cancelAll: ->
-    cancelTriggers = this.el.querySelectorAll(this.defaults.cancelSelector + ' a')
+    cancelTriggers = @el.querySelectorAll(@defaults.cancelSelector + ' a')
 
     # Fake the cancel click
     for trigger in cancelTriggers
-      console.log(trigger, hasClass(trigger, 'hidden'))
       trigger.click() unless hasClass(trigger, 'hidden')
 
     # Clear up the queue
-    if this.defaults.queue
-      for queuedFile in this._fileQueue
+    if @defaults.queue
+      for queuedFile in @_fileQueue
         if queuedFile.state is 'unprocessed'
+          @emit('candru-queue-cancelled', queuedFile.file, queuedFile.index, 'cancelled')
           queuedFile.state = 'cancelled'
 
   getFileCount: ->
-    return this._index
+    return @_index
 
   allFilesFinished: ->
-    return this._index == (this._complete + this._failed + this._cancelled)
+    return @_index == (@_complete + @_failed + @_cancelled)
