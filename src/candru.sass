@@ -1,0 +1,61 @@
+.candru
+  width: 100%
+  border: 1px solid #CCCCCC
+  height: 200px
+  overflow-y: auto
+
+  .candru-upload
+    padding: 8px
+    border-bottom: 1px solid #CCCCCC
+
+    label
+      display: inline-block
+
+    .cancel
+      margin-right: 4px
+      padding-right: 4px
+      border-right: 1px solid #999999
+
+      a
+        &.hidden
+          visibility: hidden
+
+    .filename, .filesize
+      font-size: 14px
+
+    .filename
+      width: 260px
+      white-space: nowrap
+      overflow: hidden
+      text-overflow: ellipsis
+
+    .filesize
+      width: 100px
+
+    .candru-progress
+      background-color: #EFEFEF
+      width: 200px
+      border: 1px solid #777777
+      height: 24px
+
+    .meter
+      background-color: #FED995
+      width: 0
+      height: 100%
+      display: inline-block
+      transition: width .4s
+
+      &.done
+        background-color: #39A955
+
+      &.cancelled
+        background-color: #666666
+
+  div:nth-child(even)
+    background-color: white
+
+  div:nth-child(odd)
+    background-color: #E4E4E4
+
+  &.candru-over
+    box-shadow: inset 0 0 10px #ED523C

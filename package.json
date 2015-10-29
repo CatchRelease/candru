@@ -1,0 +1,53 @@
+{
+  "name": "candru",
+  "version": "1.0.0",
+  "description": "Simple and heavily customizable file drag and drop with S3 direct support.",
+  "keywords": [
+    "dragndrop",
+    "drag and drop",
+    "file upload",
+    "upload",
+    "S3",
+    "Amazon S3"
+  ],
+  "homepage": "https://github.com/catchrelease/candru",
+  "main": "./dist/candru.js",
+  "maintainers": [
+    {
+      "name": "Michael Carey",
+      "email": "mikecx@gmail.com",
+      "web": "http://careycode.com"
+    }
+  ],
+  "contributors": [
+    {
+      "name": "Michael Carey",
+      "email": "mikecx@gmail.com",
+      "web": "http://careycode.com"
+    }
+  ],
+  "scripts": {
+  },
+  "bugs": {
+    "email": "mikecx@gmail.com",
+    "url": "https://github.com/catchandrelease/candru/issues"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/catchandrelease/candru.git"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "gulp": "3.9.0",
+    "run-sequence": "1.1.4",
+    "gulp-util": "3.0.7",
+    "del": "2.0.2",
+    "gulp-coffeelint": "0.5.0",
+    "gulp-coffee": "2.3.1",
+    "gulp-minify": "0.0.5",
+    "gulp-sass": "2.1.0",
+    "gulp-cssmin": "0.1.7",
+    "gulp-rename": "1.2.2"
+  }
+}
