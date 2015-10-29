@@ -18,6 +18,12 @@ class window.Candru
     else
       el.className = el.className.replace(new RegExp('(^|\\b)' + className.split(' ').join('|') + '(\\b|$)', 'gi'), ' ')
 
+  hasClass = (el, className) ->
+    if (el.classList)
+      el.classList.contains(className)
+    else
+      new RegExp('(^| )' + className + '( |$)', 'gi').test(el.className)
+
   readableFileSize = (bytes) ->
     if bytes == 0
       return "0.00 B"
@@ -28,6 +34,7 @@ class window.Candru
   constructor: (el, options = {}) ->
     defaults = {
       debug                 : false,
+      queue                 : false,
       overClass             : 'candru-over',
       cancelSelector        : '.cancel',
       uploadSuccessClass    : 'done',
@@ -56,6 +63,8 @@ class window.Candru
     this._complete = 0
     this._cancelled = 0
     this._failed = 0
+
+    this._fileQueue = []
 
     this.defaults = extend(defaults, options)
     this.el = window.document.querySelector(el)
@@ -101,7 +110,7 @@ class window.Candru
       true
 
   sanitizeFilename: (file) ->
-    # Taken from https://github.com/parshap/node-sanitize-filename
+# Taken from https://github.com/parshap/node-sanitize-filename
     spacesRe = /\ /g
     illegalRe = /[\/\?<>\\:\*\|":]/g
     controlRe = /[\x00-\x1f\x80-\x9f]/g
@@ -110,11 +119,11 @@ class window.Candru
     replacement = ''
 
     return file.name
-      .replace(spacesRe, '_')
-      .replace(illegalRe, replacement)
-      .replace(controlRe, replacement)
-      .replace(reservedRe, replacement)
-      .replace(windowsReservedRe, replacement)
+    .replace(spacesRe, '_')
+    .replace(illegalRe, replacement)
+    .replace(controlRe, replacement)
+    .replace(reservedRe, replacement)
+    .replace(windowsReservedRe, replacement)
 
   getMeterEl: (index) =>
     uploadMeterSelector = ".candru [data-upload-id=\"#{index}\"] .meter"
@@ -174,7 +183,15 @@ class window.Candru
       uploadItem = this.defaults.createUploadItem(file, this._index)
       this.el.appendChild(uploadItem)
 
-      this.defaults.uploadHandler(file, this._index)
+      if this.defaults.queue
+        this._fileQueue.push({
+          file: file,
+          index: this._index,
+          state: 'unprocessed'
+        })
+      else
+        this.defaults.uploadHandler(file, this._index)
+
       this._index++
 
     false
@@ -225,6 +242,11 @@ class window.Candru
     cancelEl = this.defaults.getCancelEl(index)
     addClass(cancelEl.querySelector('a'), 'hidden')
 
+    if this.defaults.queue
+      for queuedFile in this._fileQueue
+        if queuedFile.index is index
+          queuedFile.state = 'cancelled'
+
     evap.cancel(index)
 
   uploadInfo: (message, file, index) =>
@@ -243,6 +265,29 @@ class window.Candru
 
     uploadMeter = this.getMeterEl(index)
     addClass(uploadMeter, this.defaults.uploadFailedClass)
+
+  processQueue: ->
+    return false unless this.defaults.queue
+
+    for queuedFile in this._fileQueue
+      if queuedFile.state is 'unprocessed'
+        this.defaults.uploadHandler(queuedFile.file, queuedFile.index)
+        queuedFile.state = 'processed'
+      else
+
+  cancelAll: ->
+    cancelTriggers = this.el.querySelectorAll(this.defaults.cancelSelector + ' a')
+
+    # Fake the cancel click
+    for trigger in cancelTriggers
+      console.log(trigger, hasClass(trigger, 'hidden'))
+      trigger.click() unless hasClass(trigger, 'hidden')
+
+    # Clear up the queue
+    if this.defaults.queue
+      for queuedFile in this._fileQueue
+        if queuedFile.state is 'unprocessed'
+          queuedFile.state = 'cancelled'
 
   getFileCount: ->
     return this._index

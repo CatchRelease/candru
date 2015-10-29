@@ -1,7 +1,7 @@
 var bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
 
 window.Candru = (function() {
-  var addClass, extend, readableFileSize, removeClass;
+  var addClass, extend, hasClass, readableFileSize, removeClass;
 
   extend = function(object, properties) {
     var key, val;
@@ -25,6 +25,14 @@ window.Candru = (function() {
       return el.classList.remove(className);
     } else {
       return el.className = el.className.replace(new RegExp('(^|\\b)' + className.split(' ').join('|') + '(\\b|$)', 'gi'), ' ');
+    }
+  };
+
+  hasClass = function(el, className) {
+    if (el.classList) {
+      return el.classList.contains(className);
+    } else {
+      return new RegExp('(^| )' + className + '( |$)', 'gi').test(el.className);
     }
   };
 
@@ -57,6 +65,7 @@ window.Candru = (function() {
     this.overHandler = bind(this.overHandler, this);
     defaults = {
       debug: false,
+      queue: false,
       overClass: 'candru-over',
       cancelSelector: '.cancel',
       uploadSuccessClass: 'done',
@@ -84,6 +93,7 @@ window.Candru = (function() {
     this._complete = 0;
     this._cancelled = 0;
     this._failed = 0;
+    this._fileQueue = [];
     this.defaults = extend(defaults, options);
     this.el = window.document.querySelector(el);
     if (!this.el) {
@@ -191,7 +201,15 @@ window.Candru = (function() {
       }
       uploadItem = this.defaults.createUploadItem(file, this._index);
       this.el.appendChild(uploadItem);
-      this.defaults.uploadHandler(file, this._index);
+      if (this.defaults.queue) {
+        this._fileQueue.push({
+          file: file,
+          index: this._index,
+          state: 'unprocessed'
+        });
+      } else {
+        this.defaults.uploadHandler(file, this._index);
+      }
       this._index++;
     }
     return false;
@@ -251,7 +269,7 @@ window.Candru = (function() {
   };
 
   Candru.prototype.uploadCancel = function(file, index) {
-    var cancelEl, evap, uploadMeter;
+    var cancelEl, evap, i, len, queuedFile, ref, uploadMeter;
     this._cancelled++;
     if (!this.defaults.evaporate) {
       throw new Error('Evaporate instance is null.');
@@ -262,6 +280,15 @@ window.Candru = (function() {
     uploadMeter.style.width = '100%';
     cancelEl = this.defaults.getCancelEl(index);
     addClass(cancelEl.querySelector('a'), 'hidden');
+    if (this.defaults.queue) {
+      ref = this._fileQueue;
+      for (i = 0, len = ref.length; i < len; i++) {
+        queuedFile = ref[i];
+        if (queuedFile.index === index) {
+          queuedFile.state = 'cancelled';
+        }
+      }
+    }
     return evap.cancel(index);
   };
 
@@ -285,6 +312,50 @@ window.Candru = (function() {
     this._failed++;
     uploadMeter = this.getMeterEl(index);
     return addClass(uploadMeter, this.defaults.uploadFailedClass);
+  };
+
+  Candru.prototype.processQueue = function() {
+    var i, len, queuedFile, ref, results;
+    if (!this.defaults.queue) {
+      return false;
+    }
+    ref = this._fileQueue;
+    results = [];
+    for (i = 0, len = ref.length; i < len; i++) {
+      queuedFile = ref[i];
+      if (queuedFile.state === 'unprocessed') {
+        this.defaults.uploadHandler(queuedFile.file, queuedFile.index);
+        results.push(queuedFile.state = 'processed');
+      } else {
+
+      }
+    }
+    return results;
+  };
+
+  Candru.prototype.cancelAll = function() {
+    var cancelTriggers, i, j, len, len1, queuedFile, ref, results, trigger;
+    cancelTriggers = this.el.querySelectorAll(this.defaults.cancelSelector + ' a');
+    for (i = 0, len = cancelTriggers.length; i < len; i++) {
+      trigger = cancelTriggers[i];
+      console.log(trigger, hasClass(trigger, 'hidden'));
+      if (!hasClass(trigger, 'hidden')) {
+        trigger.click();
+      }
+    }
+    if (this.defaults.queue) {
+      ref = this._fileQueue;
+      results = [];
+      for (j = 0, len1 = ref.length; j < len1; j++) {
+        queuedFile = ref[j];
+        if (queuedFile.state === 'unprocessed') {
+          results.push(queuedFile.state = 'cancelled');
+        } else {
+          results.push(void 0);
+        }
+      }
+      return results;
+    }
   };
 
   Candru.prototype.getFileCount = function() {

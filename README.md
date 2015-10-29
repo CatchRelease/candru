@@ -25,6 +25,7 @@ make sure it's included.
 `options` overrides the default selectors and functions
 
 * **debug**: default = `false`, Outputs info, warn, and error messages to console.log if `true`
+* **queue**: default = `false`, If `false`, items upload as soon as they are added,  if `true` they are queued until "processQueue" is called
 * **overClass**: default = 'candru-over', The class applied to the element when an item is dragged over
 * **cancelSelector**: default = '.cancel', The class of the element used to cancel uploads
 * **uploadSuccessClass**: default = 'done', The class applied to the progress bar when an upload finishes
@@ -59,6 +60,18 @@ make sure it's included.
 `var candru = new Candru(element, options)`
 
 `candru.allFilesFinished()`
+
+### allFilesFinished - Process all queued items. Does nothing if the queued option is set to false.
+
+`var candru = new Candru(element, options)`
+
+`candru.processQueue()`
+
+### cancelAll - Cancels all unprocessed items.
+
+`var candru = new Candru(element, options)`
+
+`candru.cancelAll()`
 
 ## Overriding the template
 Simply supply a different "createUploadItem" function in the options that returns an HTMLElement. The default structure looks like:
