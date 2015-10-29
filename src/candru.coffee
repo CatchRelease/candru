@@ -85,6 +85,8 @@ class window.Candru extends Emitter
       queue                 : false,
       overClass             : 'candru-over',
       cancelSelector        : '.cancel',
+      fileInputSelector     : 'input[type="file"]',
+      emptyTextSelector     : '.empty-text',
       uploadSuccessClass    : 'done',
       uploadFailedClass     : 'failed',
       uploadCancelledClass  : 'cancelled',
@@ -127,6 +129,11 @@ class window.Candru extends Emitter
     @el.addEventListener('dragover', @defaults.overHandler)
     @el.addEventListener('dragleave', @defaults.leaveHandler)
     @el.addEventListener('drop', @defaults.dropHandler)
+
+    # Also let people click to add files
+    fileInput = @el.querySelector(@defaults.fileInputSelector)
+    if fileInput?
+      fileInput.addEventListener('change', @defaults.dropHandler)
 
   overHandler: (e) =>
     e.preventDefault()
@@ -227,7 +234,16 @@ class window.Candru extends Emitter
     @emit('candru-drop', e)
     removeClass(@el, @defaults.overClass)
 
-    files = e.dataTransfer.files
+    emptyText = @el.querySelector(@defaults.emptyTextSelector)
+    emptyText.parentNode.removeChild(emptyText) if emptyText?
+
+    files = if e.dataTransfer?
+      e.dataTransfer.files
+    else if e.currentTarget
+      e.currentTarget.files
+    else
+      throw new Error('Could not find the files')
+
     for file in files
       if not @fileTypeCheck(file)
         console.log('Skipping file of type: ', file.type)
@@ -341,7 +357,7 @@ class window.Candru extends Emitter
     uploadMeter = @getMeterEl(index)
     addClass(uploadMeter, @defaults.uploadFailedClass)
 
-  processQueue: ->
+  processQueue: =>
     return false unless @defaults.queue
 
     for queuedFile in @_fileQueue
@@ -350,7 +366,7 @@ class window.Candru extends Emitter
         queuedFile.state = 'processed'
       else
 
-  cancelAll: ->
+  cancelAll: =>
     cancelTriggers = @el.querySelectorAll(@defaults.cancelSelector)
 
     # Fake the cancel click

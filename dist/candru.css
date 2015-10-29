@@ -2,7 +2,14 @@
   width: 100%;
   border: 1px solid #CCCCCC;
   height: 200px;
-  overflow-y: auto; }
+  overflow-y: auto;
+  position: relative; }
+  .candru input[type="file"] {
+    height: 100%;
+    position: absolute;
+    opacity: 0; }
+  .candru .empty-text {
+    line-height: 200px; }
   .candru .candru-upload {
     padding: 8px;
     border-bottom: 1px solid #CCCCCC; }

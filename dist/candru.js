@@ -120,6 +120,8 @@ window.Candru = (function(superClass) {
     if (options == null) {
       options = {};
     }
+    this.cancelAll = bind(this.cancelAll, this);
+    this.processQueue = bind(this.processQueue, this);
     this.uploadError = bind(this.uploadError, this);
     this.uploadWarn = bind(this.uploadWarn, this);
     this.uploadInfo = bind(this.uploadInfo, this);
@@ -138,6 +140,8 @@ window.Candru = (function(superClass) {
       queue: false,
       overClass: 'candru-over',
       cancelSelector: '.cancel',
+      fileInputSelector: 'input[type="file"]',
+      emptyTextSelector: '.empty-text',
       uploadSuccessClass: 'done',
       uploadFailedClass: 'failed',
       uploadCancelledClass: 'cancelled',
@@ -176,9 +180,14 @@ window.Candru = (function(superClass) {
   }
 
   Candru.prototype.init = function() {
+    var fileInput;
     this.el.addEventListener('dragover', this.defaults.overHandler);
     this.el.addEventListener('dragleave', this.defaults.leaveHandler);
-    return this.el.addEventListener('drop', this.defaults.dropHandler);
+    this.el.addEventListener('drop', this.defaults.dropHandler);
+    fileInput = this.el.querySelector(this.defaults.fileInputSelector);
+    if (fileInput != null) {
+      return fileInput.addEventListener('change', this.defaults.dropHandler);
+    }
   };
 
   Candru.prototype.overHandler = function(e) {
@@ -263,12 +272,24 @@ window.Candru = (function(superClass) {
   };
 
   Candru.prototype.dropHandler = function(e) {
-    var file, files, j, len, uploadItem;
+    var emptyText, file, files, j, len, uploadItem;
     e.preventDefault();
     e.stopPropagation();
     this.emit('candru-drop', e);
     removeClass(this.el, this.defaults.overClass);
-    files = e.dataTransfer.files;
+    emptyText = this.el.querySelector(this.defaults.emptyTextSelector);
+    if (emptyText != null) {
+      emptyText.parentNode.removeChild(emptyText);
+    }
+    files = (function() {
+      if (e.dataTransfer != null) {
+        return e.dataTransfer.files;
+      } else if (e.currentTarget) {
+        return e.currentTarget.files;
+      } else {
+        throw new Error('Could not find the files');
+      }
+    })();
     for (j = 0, len = files.length; j < len; j++) {
       file = files[j];
       if (!this.fileTypeCheck(file)) {

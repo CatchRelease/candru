@@ -13,7 +13,11 @@ make sure it's included.
     <script language="javascript" type="text/javascript" src="../candru.js"></script>
     <link rel="stylesheet" href="../candru.css">
 
-    <div id="my-uploader" class="candru"></div>
+    <div id="my-uploader" class="candru">
+      <input type="file" multiple>
+      <h5 class="empty-text text-center">Click or Drag Files to Upload</h5>
+    </div>
+
 ## Use Candru
 
 ### new Candru()
@@ -28,6 +32,8 @@ make sure it's included.
 * **queue**: default = `false`, If `false`, items upload as soon as they are added,  if `true` they are queued until "processQueue" is called
 * **overClass**: default = 'candru-over', The class applied to the element when an item is dragged over
 * **cancelSelector**: default = '.cancel', The class of the element used to cancel uploads
+* **fileInputSelector**: defaults = 'input[type="file"]', The class of the standard <input type="file"> to attach to if desired
+* **emptyTextSelector**: default = '.empty-text', The class of the empty text to remove when starting uploads.
 * **uploadSuccessClass**: default = 'done', The class applied to the progress bar when an upload finishes
 * **uploadFailedClass**: default = 'failed', The class applied to the progress bar when an upload fails
 * **uploadCancelledClass**: default = 'cancelled', The class applied to the progress bar when an upload is cancelled.
