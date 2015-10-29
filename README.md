@@ -70,7 +70,7 @@ make sure it's included.
 
 `candru.allFilesFinished()`
 
-### allFilesFinished - Process all queued items. Does nothing if the queued option is set to false.
+### processQueue - Process all queued items. Does nothing if the queued option is set to false.
 
 `var candru = new Candru(element, options)`
 
