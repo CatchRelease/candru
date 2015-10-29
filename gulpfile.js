@@ -35,9 +35,7 @@ gulp.task('coffee', function () {
 
 gulp.task('minify-js', function() {
   gulp.src('./dist/*.js')
-    .pipe(minify({
-        ignoreFiles: ['*-min.js']
-    }))
+    .pipe(minify())
     .pipe(gulp.dest('./dist/'))
 });
 
