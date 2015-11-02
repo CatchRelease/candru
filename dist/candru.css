@@ -50,6 +50,8 @@
         background-color: #39A955; }
       .candru .candru-upload .meter.cancelled {
         background-color: #666666; }
+      .candru .candru-upload .meter.failed {
+        background-color: red; }
   .candru div:nth-child(even) {
     background-color: white; }
   .candru div:nth-child(odd) {
