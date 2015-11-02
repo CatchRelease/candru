@@ -121,7 +121,10 @@ class window.Candru extends Emitter
 
     @defaults = extend(defaults, options)
     @el = window.document.querySelector(el)
-    throw new Error('Could not find element for uploader.') unless @el
+
+    if not @el
+      console.log('Could not find element for uploader.')
+      return
 
     @init()
 

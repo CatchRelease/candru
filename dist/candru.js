@@ -174,7 +174,8 @@ window.Candru = (function(superClass) {
     this.defaults = extend(defaults, options);
     this.el = window.document.querySelector(el);
     if (!this.el) {
-      throw new Error('Could not find element for uploader.');
+      console.log('Could not find element for uploader.');
+      return;
     }
     this.init();
   }

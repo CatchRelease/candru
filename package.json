@@ -1,6 +1,6 @@
 {
   "name": "candru",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "description": "Simple and heavily customizable file drag and drop with S3 direct support.",
   "keywords": [
     "dragndrop",

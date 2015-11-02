@@ -135,7 +135,11 @@ A few additional fields are made available on each file object for convenience.
 * Use Event triggering
 
 ## Building
+The build tools could use some work, currently the minify steps as part of the default gulp don't seem to work.
+
 
     brew install node
     npm install
     gulp
+    gulp minify_js
+    gulp minify_css
