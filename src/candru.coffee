@@ -287,7 +287,10 @@ class window.Candru extends Emitter
     evap.add({
       name: file.uploadName,
       file: file,
-      complete: =>
+      complete: (response) =>
+        url = response.responseURL
+        file.awsPath = url.substr(0, url.lastIndexOf('?')).replace(/%2F/g, '/')
+
         @emit('candru-evaporate-complete', file, index)
         @defaults.uploadComplete(file, index)
       progress: (progress) =>

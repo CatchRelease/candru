@@ -333,7 +333,10 @@ window.Candru = (function(superClass) {
       name: file.uploadName,
       file: file,
       complete: (function(_this) {
-        return function() {
+        return function(response) {
+          var url;
+          url = response.responseURL;
+          file.awsPath = url.substr(0, url.lastIndexOf('?')).replace(/%2F/g, '/');
           _this.emit('candru-evaporate-complete', file, index);
           return _this.defaults.uploadComplete(file, index);
         };

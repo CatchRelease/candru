@@ -39,7 +39,7 @@ make sure it's included.
 * **uploadCancelledClass**: default = 'cancelled', The class applied to the progress bar when an upload is cancelled.
 * **allowedTypes**: default = [/^image\//, /^video\//], An array of regexs to match the file type against
 * **maxFileSize**: default = 4294967296, Maximum file size in bytes
-* **evaporate**: default = null, An EvaporateJS instance to use for file uploads. You will need to provide a different upload handler if this doesn't exist.
+* **evaporate**: default = null, An [EvaporateJS](https://github.com/TTLabs/EvaporateJS) instance to use for file uploads. You will need to provide a different upload handler if this doesn't exist.
 * **sanitizeFilename**: default = this.sanitizeFilename, A function passed in the file used to clean up the file name, needs to return a string
 * **renameFile**: default = this.renameFile, A function passed in the file, by default just returns the file name
 * **overHandler**: default = this.overHandler, A function passed in the event, should preventDefault/stopPropagation
@@ -125,6 +125,8 @@ A few additional fields are made available on each file object for convenience.
 `file.uniqueId` - A unique random string generated for each file
 
 `file.uploadName` - The name of the file after both sanitization and renaming.
+
+`file.awsPath` - The path where the file can be found on AWS S3 if using [EvaporateJS](https://github.com/TTLabs/EvaporateJS)
 
 ## TODO
 
