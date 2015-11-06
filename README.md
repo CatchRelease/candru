@@ -51,6 +51,7 @@ make sure it's included.
 * **uploadComplete**: default = this.uploadComplete, A function passed in the file and index, handles setting a file as complete
 * **uploadStartCallback**: default = noop, A callback function passed in the file, index, and true/false if all files have finished.
 * **uploadCompleteCallback**: default = noop, A callback function passed in the file, index, and true/false if all files have finished.
+* **uploadFailedCallback**: default = noop, A callback function passed in the error message, file, index, and true/false if all files have finished.
 * **uploadProgress**: default = this.uploadProgress, A function passed in the progress (0.0 - 1.0), the file, and the index, handles updating the progress.
 * **uploadCancel**: default = this.uploadCancel, A function passed in the the file, and the index, handles updating the progress.
 * **uploadInfo**: default = this.uploadInfo, A function passed in the message, the file, and the index, handles updating the progress.

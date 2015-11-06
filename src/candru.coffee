@@ -104,6 +104,7 @@ class window.Candru extends Emitter
       uploadComplete        : @uploadComplete,
       uploadStartCallback   : noop,
       uploadCompleteCallback: noop,
+      uploadFailedCallback  : noop,
       uploadProgress        : @uploadProgress,
       uploadCancel          : @uploadCancel,
       uploadInfo            : @uploadInfo,
@@ -173,7 +174,7 @@ class window.Candru extends Emitter
       true
 
   sanitizeFilename: (file) ->
-# Taken from https://github.com/parshap/node-sanitize-filename
+    # Taken from https://github.com/parshap/node-sanitize-filename
     spacesRe = /\ /g
     illegalRe = /[\/\?<>\\:\*\|":]/g
     controlRe = /[\x00-\x1f\x80-\x9f]/g
@@ -284,6 +285,9 @@ class window.Candru extends Emitter
 
     @defaults.uploadStartCallback(file, index, @allFilesFinished())
 
+    # Kick off a tiny bit of progress so people can tell it's working
+    @defaults.uploadProgress('0.0', file, index)
+
     evap.add({
       name: file.uploadName,
       file: file,
@@ -320,6 +324,10 @@ class window.Candru extends Emitter
     @defaults.uploadCompleteCallback(file, index, @allFilesFinished())
 
   uploadProgress: (progress, file, index) =>
+    # Setting a little bit of progress by default.
+    if progress < 0.05
+      progress = 0.05
+
     uploadMeter = @defaults.getMeterEl(index)
     uploadMeter.style.width = "#{progress * 100.0}%"
 
@@ -362,6 +370,8 @@ class window.Candru extends Emitter
 
     uploadMeter = @getMeterEl(index)
     addClass(uploadMeter, @defaults.uploadFailedClass)
+
+    @defaults.uploadFailedCallback(message, file, index, @allFilesFinished())
 
   processQueue: =>
     return false unless @defaults.queue

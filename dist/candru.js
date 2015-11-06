@@ -159,6 +159,7 @@ window.Candru = (function(superClass) {
       uploadComplete: this.uploadComplete,
       uploadStartCallback: noop,
       uploadCompleteCallback: noop,
+      uploadFailedCallback: noop,
       uploadProgress: this.uploadProgress,
       uploadCancel: this.uploadCancel,
       uploadInfo: this.uploadInfo,
@@ -329,6 +330,7 @@ window.Candru = (function(superClass) {
     }
     evap = this.defaults.evaporate;
     this.defaults.uploadStartCallback(file, index, this.allFilesFinished());
+    this.defaults.uploadProgress('0.0', file, index);
     return evap.add({
       name: file.uploadName,
       file: file,
@@ -381,6 +383,9 @@ window.Candru = (function(superClass) {
 
   Candru.prototype.uploadProgress = function(progress, file, index) {
     var uploadMeter;
+    if (progress < 0.05) {
+      progress = 0.05;
+    }
     uploadMeter = this.defaults.getMeterEl(index);
     return uploadMeter.style.width = (progress * 100.0) + "%";
   };
@@ -431,7 +436,8 @@ window.Candru = (function(superClass) {
     }
     this._failed++;
     uploadMeter = this.getMeterEl(index);
-    return addClass(uploadMeter, this.defaults.uploadFailedClass);
+    addClass(uploadMeter, this.defaults.uploadFailedClass);
+    return this.defaults.uploadFailedCallback(message, file, index, this.allFilesFinished());
   };
 
   Candru.prototype.processQueue = function() {
